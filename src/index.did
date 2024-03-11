@@ -1,0 +1,77 @@
+type GymClass = record {
+  id : text;
+  startTime : text;
+  endTime : text;
+  name : text;
+  createdAt : nat64;
+  description : text;
+  trainerId : text;
+  updatedAt : opt nat64;
+  capacity : float64;
+};
+type GymClassPayload = record {
+  startTime : text;
+  endTime : text;
+  name : text;
+  description : text;
+  trainerId : text;
+  capacity : float64;
+};
+type Member = record {
+  id : text;
+  joinDate : text;
+  name : text;
+  createdAt : nat64;
+  email : text;
+  updatedAt : opt nat64;
+  membershipType : text;
+};
+type MemberPayload = record {
+  joinDate : text;
+  name : text;
+  email : text;
+  membershipType : text;
+};
+type Trainer = record {
+  id : text;
+  name : text;
+  createdAt : nat64;
+  email : text;
+  updatedAt : opt nat64;
+  specializations : vec text;
+};
+type TrainerPayload = record {
+  name : text;
+  email : text;
+  specializations : vec text;
+};
+type _AzleResult = variant { Ok : GymClass; Err : text };
+type _AzleResult_1 = variant { Ok : Member; Err : text };
+type _AzleResult_2 = variant { Ok : Trainer; Err : text };
+type _AzleResult_3 = variant { Ok : bool; Err : text };
+type _AzleResult_4 = variant { Ok : vec GymClass; Err : text };
+type _AzleResult_5 = variant { Ok : vec Member; Err : text };
+type _AzleResult_6 = variant { Ok : vec Trainer; Err : text };
+service : () -> {
+  addGymClass : (GymClassPayload) -> (_AzleResult);
+  addMember : (MemberPayload) -> (_AzleResult_1);
+  addTrainer : (TrainerPayload) -> (_AzleResult_2);
+  checkTrainerAvailability : (text, text, text) -> (_AzleResult_3) query;
+  deleteGymClass : (text) -> (_AzleResult);
+  deleteMember : (text) -> (_AzleResult_1);
+  deleteTrainer : (text) -> (_AzleResult_2);
+  filterGymClassesByStartTime : (text) -> (_AzleResult_4) query;
+  getGymClass : (text) -> (_AzleResult) query;
+  getGymClasses : () -> (_AzleResult_4) query;
+  getMember : (text) -> (_AzleResult_1) query;
+  getMembers : () -> (_AzleResult_5) query;
+  getTrainer : (text) -> (_AzleResult_2) query;
+  getTrainers : () -> (_AzleResult_6) query;
+  searchMembers : (text) -> (_AzleResult_5) query;
+  updateGymClass : (text, GymClassPayload) -> (_AzleResult);
+  updateMember : (text, MemberPayload) -> (_AzleResult_1);
+  updateMemberEmail : (text, text) -> (_AzleResult_1);
+  updateMemberName : (text, text) -> (_AzleResult_1);
+  updateMembershipType : (text, text) -> (_AzleResult_1);
+  updateTrainer : (text, TrainerPayload) -> (_AzleResult_2);
+}
