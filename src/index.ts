@@ -1,8 +1,8 @@
-// Import necessary modules
+// Import necessary modules and types
 import { $query, $update, Record, StableBTreeMap, Vec, match, Result, nat64, ic, Opt } from 'azle';
 import { v4 as uuidv4 } from 'uuid';
 
-// Define types for Member and MemberPayload
+// Define types for Member and MemberPayload for type safety and clarity
 type Member = Record<{
     id: string;
     name: string;
@@ -11,16 +11,16 @@ type Member = Record<{
     membershipType: string;
     createdAt: nat64;
     updatedAt: Opt<nat64>;
-}>
+}>;
 
 type MemberPayload = Record<{
     name: string;
     email: string;
     joinDate: string;
     membershipType: string;
-}>
+}>;
 
-// Define types for GymClass and Trainer
+// Define types for GymClass and Trainer to manage gym operations
 type GymClass = Record<{
     id: string;
     name: string;
@@ -31,7 +31,7 @@ type GymClass = Record<{
     capacity: number;
     createdAt: nat64;
     updatedAt: Opt<nat64>;
-}>
+}>;
 
 type Trainer = Record<{
     id: string;
@@ -40,7 +40,7 @@ type Trainer = Record<{
     specializations: Vec<string>;
     createdAt: nat64;
     updatedAt: Opt<nat64>;
-}>
+}>;
 
 type GymClassPayload = Record<{
     name: string;
@@ -49,103 +49,89 @@ type GymClassPayload = Record<{
     endTime: string;
     trainerId: string;
     capacity: number;
-}>
+}>;
 
 type TrainerPayload = Record<{
     name: string;
     email: string;
     specializations: Vec<string>;
-}>
+}>;
 
-// Create maps to store gym class, trainer, and member records
-const memberStorage = new StableBTreeMap<string, Member>(0, 44, 1024);
-const classStorage = new StableBTreeMap<string, GymClass>(1, 44, 1024);
-const trainerStorage = new StableBTreeMap<string, Trainer>(2, 44, 1024);
-$query;
-export function getMembers(): Result<Vec<Member>, string> {
-    return Result.Ok(memberStorage.values());
+// Initialize storage maps for Members, Gym Classes, and Trainers
+const memberStorage = new StableBTreeMap<string, Member>();
+const classStorage = new StableBTreeMap<string, GymClass>();
+const trainerStorage = new StableBTreeMap<string, Trainer>();
+
+// Utility function to validate payload completeness
+function isPayloadValid(payload: object): boolean {
+    return Object.values(payload).every(value => value !== undefined && value !== '');
 }
 
+// Utility function to update a specific member property and handle common update logic
+function updateMemberProperty(id: string, property: keyof Member, value: any): Result<Member, string> {
+    const member = memberStorage.get(id);
+    if (!member) {
+        return Result.Err(`Member with id=${id} not found`);
+    }
+    const updatedMember: Member = { ...member, [property]: value, updatedAt: Opt.Some(ic.time()) };
+    memberStorage.set(member.id, updatedMember);
+    return Result.Ok(updatedMember);
+}
+
+// Fetches all members from storage
+$query;
+export function getMembers(): Vec<Member> {
+    return memberStorage.values();
+}
+
+// Fetch a single member by ID
 $query;
 export function getMember(id: string): Result<Member, string> {
-    return match(memberStorage.get(id), {
-        Some: (member) => Result.Ok<Member, string>(member),
-        None: () => Result.Err<Member, string>(`Member with id=${id} not found`)
-    });
+    const member = memberStorage.get(id);
+    if (!member) {
+        return Result.Err(`Member with id=${id} not found`);
+    }
+    return Result.Ok(member);
 }
 
+// Adds a new member to the storage
 $update;
 export function addMember(payload: MemberPayload): Result<Member, string> {
-    // Input validation
-    if (!payload || !payload.name || !payload.email || !payload.joinDate || !payload.membershipType) {
+    if (!isPayloadValid(payload)) {
         return Result.Err("Invalid member payload. All fields are required.");
     }
 
     const member: Member = { id: uuidv4(), createdAt: ic.time(), updatedAt: Opt.None, ...payload };
-    memberStorage.insert(member.id, member);
+    memberStorage.set(member.id, member);
     return Result.Ok(member);
 }
 
+// Updates an existing member's information
 $update;
 export function updateMember(id: string, payload: MemberPayload): Result<Member, string> {
-    // Input validation
-    if (!id) {
-        return Result.Err("Invalid member ID.");
-    }
-    if (!payload || Object.keys(payload).length === 0) {
-        return Result.Err("Invalid payload. At least one field must be provided for update.");
+    if (!id || !isPayloadValid(payload)) {
+        return Result.Err("Invalid payload. All fields must be provided for update.");
     }
 
-    return match(memberStorage.get(id), {
-        Some: (member) => {
-            const updatedMember: Member = {...member, ...payload, updatedAt: Opt.Some(ic.time())};
-            memberStorage.insert(member.id, updatedMember);
-            return Result.Ok<Member, string>(updatedMember);
-        },
-        None: () => Result.Err<Member, string>(`Couldn't update a member with id=${id}. Member not found`)
-    });
+    const member = memberStorage.get(id);
+    if (!member) {
+        return Result.Err(`Member with id=${id} not found`);
+    }
+    const updatedMember: Member = { ...member, ...payload, updatedAt: Opt.Some(ic.time()) };
+    memberStorage.set(member.id, updatedMember);
+    return Result.Ok(updatedMember);
 }
 
-$update;
-export function deleteMember(id: string): Result<Member, string> {
-    return match(memberStorage.remove(id), {
-        Some: (deletedMember) => Result.Ok<Member, string>(deletedMember),
-        None: () => Result.Err<Member, string>(`Couldn't delete a member with id=${id}. Member not found.`)
-    });
-}
-
-// Update member's membership type by ID
+// Updates a specific member's membership type
 $update;
 export function updateMembershipType(id: string, membershipType: string): Result<Member, string> {
-    return match(memberStorage.get(id), {
-        Some: (member) => {
-            const updatedMember: Member = { ...member, membershipType, updatedAt: Opt.Some(ic.time()) };
-            memberStorage.insert(member.id, updatedMember);
-            return Result.Ok<Member, string>(updatedMember);
-        },
-        None: () => Result.Err<Member, string>(`Couldn't update the membership type for member with id=${id}. Member not found`)
-    });
+    return updateMemberProperty(id, "membershipType", membershipType);
 }
 
-// Update member's email by ID
+// Updates a specific member's email address
 $update;
 export function updateMemberEmail(id: string, email: string): Result<Member, string> {
-    // Input validation
-    if (!id) {
-        return Result.Err("Invalid member ID.");
-    }
-    if (!email) {
-        return Result.Err("Invalid email. Email field is required.");
-    }
-
-    return match(memberStorage.get(id), {
-        Some: (member) => {
-            const updatedMember: Member = { ...member, email, updatedAt: Opt.Some(ic.time()) };
-            memberStorage.insert(member.id, updatedMember);
-            return Result.Ok<Member, string>(updatedMember);
-        },
-        None: () => Result.Err<Member, string>(`Couldn't update the email for member with id=${id}. Member not found`)
-    });
+    return updateMemberProperty(id, "email", email);
 }
 
 $update;
