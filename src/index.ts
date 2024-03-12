@@ -58,9 +58,9 @@ type TrainerPayload = Record<{
 }>;
 
 // Initialize storage maps for Members, Gym Classes, and Trainers
-const memberStorage = new StableBTreeMap<string, Member>();
-const classStorage = new StableBTreeMap<string, GymClass>();
-const trainerStorage = new StableBTreeMap<string, Trainer>();
+const memberStorage = new StableBTreeMap<string, Member>(0, 44, 1024);
+const classStorage = new StableBTreeMap<string, GymClass>(1, 44, 1024);
+const trainerStorage = new StableBTreeMap<string, Trainer>(2, 44, 1024);
 
 // Utility function to validate payload completeness
 function isPayloadValid(payload: object): boolean {
